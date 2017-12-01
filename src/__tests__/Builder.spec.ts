@@ -117,6 +117,39 @@ describe("Builder", () => {
       xhr2.send();
     });
 
+    it("should resolve correct responses", done => {
+      mock.mockOnce((req, res) => {
+        return res
+          .status(200)
+          .body("firstMock");
+      });
+      t.equal(mock.XMLHttpRequest.handlers.length, 1);
+
+      mock.mockOnce((req, res) => {
+        return res
+          .status(200)
+          .body("secondMock");
+      });
+      t.equal(mock.XMLHttpRequest.handlers.length, 2);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("GET", "/a");
+      xhr.onload = () => {
+        t.equal(xhr.responseText, "secondMock");
+        t.equal(mock.XMLHttpRequest.handlers.length, 0);
+        done();
+      };
+
+      const xhr2 = new XMLHttpRequest();
+      xhr2.open("GET", "/b");
+      xhr2.onload = () => {
+        t.equal(xhr2.responseText, "firstMock");
+        t.equal(mock.XMLHttpRequest.handlers.length, 1);
+        xhr.send();
+      };
+      xhr2.send();
+    });
+
     it("should support POST method", done => {
       mock.post("/foo/123", (req, res) => res.body("123"));
 

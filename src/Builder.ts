@@ -6,7 +6,11 @@ import * as window from "global";
 const real = (window as any).XMLHttpRequest;
 
 export type UrlMatcher = string | RegExp;
-export type MockCallback = (req?: MockRequest, res?: MockResponse) => MockResponse | null;
+//export type MockCallback = (req?: MockRequest, res?: MockResponse) => MockResponse | null;
+export interface MockCallback {
+  (req?: MockRequest, res?: MockResponse): MockResponse;
+  runOnce?: boolean;
+}
 
 export class Builder {
   XMLHttpRequest = new MockXMLHttpRequest();
@@ -61,6 +65,45 @@ export class Builder {
       handler = (req, res) => res;
     }
 
+    MockXMLHttpRequest.addHandler(handler);
+
+    return this;
+  }
+
+  // TODO: make code more modular
+  /** Mock a requests */
+  mockOnce(fn: MockCallback): this;
+  mockOnce(method: string, url: UrlMatcher, fn: MockCallback): this;
+  mockOnce(method: string | MockCallback, url?: UrlMatcher, fn?: MockCallback): this {
+    let handler: MockCallback;
+
+    if (typeof url !== "undefined") {
+      const matcher = (req: MockRequest) => {
+        if (req.method() !== method) {
+          return false;
+        }
+        const reqUrl = req.url();
+
+        if (url instanceof RegExp) {
+          return url.test(reqUrl);
+        }
+
+        // otherwise assume the url is a string
+        return url === reqUrl;
+      };
+      handler = (req, res) => {
+        if (matcher(req)) {
+          return fn(req, res);
+        }
+        return null;
+      };
+    } else if (typeof method === "function") {
+      handler = method;
+    } else {
+      handler = (req, res) => res;
+    }
+
+    handler.runOnce = true;
     MockXMLHttpRequest.addHandler(handler);
 
     return this;

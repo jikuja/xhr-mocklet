@@ -63,10 +63,13 @@ export default class MockXMLHttpRequest implements XMLHttpRequest {
 
   /** Handle a request */
   static handle(req: MockRequest): MockResponse | null {
-    for (const handler of MockXMLHttpRequest.handlers) {
+    for (const [i, handler] of MockXMLHttpRequest.handlers.entries()) {
       // get the generator to create a response to the request
       const response = handler(req, new MockResponse());
       if (response) {
+        if (handler.runOnce) {
+          MockXMLHttpRequest.handlers.splice(i, 1);
+        }
         return response;
       }
     }
